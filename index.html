@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101010">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Dernek Music">
+<title>Dernek Music</title>
+<style>
+:root{color-scheme:dark;--bg:#101010;--panel:#1b1b1b;--panel2:#252525;--text:#f6f6f6;--muted:#aaa;--green:#1ed760;--line:#303030}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input{font:inherit}button{cursor:pointer;border:0}.app{min-height:100dvh;padding:env(safe-area-inset-top) 0 calc(92px + env(safe-area-inset-bottom));max-width:760px;margin:auto;background:var(--bg)}
+header{padding:22px 18px 12px;display:flex;align-items:center;justify-content:space-between}.brand{display:flex;align-items:center;gap:10px}.logo{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:var(--green);color:#101010;font-weight:900;font-size:21px}.brand h1{font-size:21px;margin:0;letter-spacing:-.6px}.brand small{color:var(--muted);display:block;font-size:11px;margin-top:2px;letter-spacing:1.5px;text-transform:uppercase}.round{background:var(--panel2);color:var(--text);width:40px;height:40px;border-radius:50%;font-size:20px}
+main{padding:0 16px}.welcome{padding:12px 2px 18px}.eyebrow{color:var(--green);font-size:11px;font-weight:800;letter-spacing:1.8px;text-transform:uppercase}.welcome h2{font-size:30px;line-height:1.08;letter-spacing:-1px;margin:7px 0}.welcome p{margin:0;color:var(--muted);font-size:14px}
+.search{display:flex;gap:10px;align-items:center;background:#242424;border-radius:12px;padding:0 14px;margin:4px 0 18px}.search span{font-size:19px;color:var(--muted)}.search input{width:100%;background:transparent;border:0;outline:0;color:var(--text);padding:14px 0}
+.tabs{display:flex;gap:8px;overflow:auto;margin:0 0 20px}.tab{background:var(--panel2);border-radius:22px;padding:9px 15px;color:var(--text);white-space:nowrap;font-size:13px}.tab.active{background:var(--green);color:#101010;font-weight:750}
+.sectionhead{display:flex;justify-content:space-between;align-items:center;margin:18px 0 12px}.sectionhead h3{font-size:19px;margin:0;letter-spacing:-.4px}.muted{font-size:12px;color:var(--muted)}
+.import{width:100%;border-radius:14px;background:linear-gradient(120deg,#214b34,#1c2922);border:1px solid #2d6243;padding:15px;display:flex;align-items:center;gap:13px;text-align:left;color:white}.import .plus{width:43px;height:43px;border-radius:12px;background:var(--green);color:#101010;font-size:28px;display:grid;place-items:center;flex-shrink:0}.import strong{display:block;font-size:15px}.import small{display:block;color:#d0e2d6;margin-top:4px;font-size:12px}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tile{border-radius:12px;background:var(--panel);padding:13px;display:flex;gap:11px;align-items:center;text-align:left;color:var(--text);min-width:0}.tile-art{width:47px;height:47px;border-radius:8px;background:linear-gradient(135deg,#265e43,#121212);display:grid;place-items:center;font-size:23px;flex-shrink:0}.tile b{display:block;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tile small{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+.list{display:flex;flex-direction:column;gap:2px}.song{display:flex;align-items:center;gap:12px;padding:9px 7px;border-radius:9px}.song:active{background:var(--panel)}.cover{width:47px;height:47px;flex-shrink:0;border-radius:7px;background:linear-gradient(135deg,#4e2d48,#171717);display:grid;place-items:center;font-size:20px}.songinfo{min-width:0;flex:1}.songinfo b{display:block;font-size:14px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.songinfo small{display:block;font-size:12px;color:var(--muted);margin-top:4px}.song button{background:transparent;color:var(--muted);font-size:20px;padding:8px}.empty{padding:24px 14px;text-align:center;background:var(--panel);border-radius:13px;color:var(--muted);font-size:13px;line-height:1.6}
+.bottom{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(100%,760px);z-index:5;padding:8px 12px calc(8px + env(safe-area-inset-bottom));background:rgba(16,16,16,.96);backdrop-filter:blur(16px);border-top:1px solid #252525}.now{display:flex;align-items:center;gap:10px;background:#242424;border-radius:10px;padding:8px;margin-bottom:8px}.now .cover{width:42px;height:42px}.nowinfo{min-width:0;flex:1}.nowinfo b{display:block;font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.nowinfo small{color:var(--muted);font-size:11px}.now button{background:transparent;color:white;font-size:21px;padding:5px}.nav{display:flex;justify-content:space-around}.nav button{background:transparent;color:var(--muted);font-size:11px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:3px 10px}.nav button span{font-size:20px}.nav button.active{color:var(--green)}
+.primary{background:var(--green);color:#111;font-weight:800;border-radius:24px;padding:10px 15px}.secondary{background:var(--panel2);color:var(--text);border-radius:20px;padding:9px 13px}.artistrow{display:flex;align-items:center;gap:12px;padding:10px 4px}.artistcircle{width:48px;height:48px;border-radius:50%;background:#294b39;display:grid;place-items:center;font-size:20px}.artistrow .artistname{flex:1;font-weight:650;font-size:14px}.artistrow small{display:block;color:var(--muted);font-weight:400;margin-top:4px}.notice{font-size:12px;color:var(--muted);line-height:1.55;margin-top:12px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="app">
+<header><div class="brand"><div class="logo">D♪</div><div><h1>Dernek Music</h1><small>Tvoja glazba · tvoj dernek</small></div></div><button class="round" id="settingsBtn" aria-label="Upute">⋯</button></header>
+<main>
+<section id="homeView">
+<div class="welcome"><div class="eyebrow">Dobro došao nazad</div><h2>Vrijeme je za<br>dobar dernek.</h2><p>Tvoje pjesme, tvoj redoslijed.</p></div>
+<label class="search"><span>⌕</span><input id="search" placeholder="Traži pjesmu ili izvođača..." autocomplete="off"></label>
+<div class="tabs"><button class="tab active" data-filter="all">Sve</button><button class="tab" data-filter="favorites">Omiljene ♥</button><button class="tab" data-filter="recent">Nedavno dodane</button></div>
+<button class="import" id="importBtn"><span class="plus">+</span><span><strong>Dodaj MP3 pjesme</strong><small>Odaberi pjesme iz aplikacije Datoteke</small></span></button>
+<input type="file" id="fileInput" accept=".mp3,audio/mpeg,audio/*" multiple class="hidden">
+<div class="sectionhead"><h3>Brzi izbor</h3><span class="muted" id="songCount">0 pjesama</span></div>
+<div class="tiles">
+<button class="tile" id="allTile"><span class="tile-art">♫</span><span><b>Sve pjesme</b><small>Glazbena biblioteka</small></span></button>
+<button class="tile" id="artistTile"><span class="tile-art">🎙</span><span><b>Izvođači</b><small>Po izvođaču</small></span></button>
+</div>
+<div class="sectionhead"><h3 id="listTitle">Tvoja glazba</h3><button class="secondary" id="shuffleBtn">⤨ Shuffle</button></div>
+<div id="songList" class="list"></div>
+<div class="notice">Savjet: MP3 datoteke koje uvezeš ostaju dostupne ovoj stranici dok podaci preglednika nisu obrisani. Ova je prva verzija prototip, a ne još App Store aplikacija.</div>
+</section>
+<section id="artistsView" class="hidden">
+<div class="welcome"><div class="eyebrow">Tvoja kolekcija</div><h2>Izvođači</h2><p>Pjesme razvrstane po izvođaču.</p></div>
+<div class="search"><span>⌕</span><input id="artistSearch" placeholder="Traži izvođača..."></div>
+<div id="artistList"></div>
+</section>
+<section id="playlistsView" class="hidden">
+<div class="welcome"><div class="eyebrow">Složi svoj dernek</div><h2>Playliste</h2><p>Napravi popis za svaku priliku.</p></div>
+<button class="import" id="newPlaylist"><span class="plus">+</span><span><strong>Nova playlista</strong><small>Na primjer: Šaban, Narodnjaci, Dernek</small></span></button>
+<div id="playlistList" style="margin-top:18px"></div>
+</section>
+<section id="helpView" class="hidden">
+<div class="welcome"><div class="eyebrow">Brzi vodič</div><h2>Kako koristiti</h2></div>
+<div class="empty" style="text-align:left;color:#ddd"><b>1. Dodaj pjesme</b><br>Dodirni „Dodaj MP3 pjesme” i izaberi MP3 datoteke u Datotekama.<br><br><b>2. Razvrstaj izvođače</b><br>Aplikacija pokušava pročitati izvođača iz naziva datoteke ili metapodataka naziva. Za prvu verziju možeš urediti izvođača pjesme iz izbornika ⋯.<br><br><b>3. Dodaj na početni zaslon</b><br>Objavljena web-adresa je potrebna. Kad je stranica otvorena u Safariju na iPhoneu, dodirni Dijeli → Dodaj na početni zaslon.<br><br><b>Napomena</b><br>Ovaj prototip pohranjuje pjesme lokalno u pregledniku. iOS može ograničiti reprodukciju u pozadini, a lokalni preview u ChatGPT-u nije javna web-adresa.</div>
+</section>
+</main>
+</div>
+<div class="bottom">
+<div class="now"><div class="cover" id="nowCover">♫</div><div class="nowinfo"><b id="nowTitle">Ništa se ne reproducira</b><small id="nowArtist">Dodaj svoje pjesme</small></div><button id="prevBtn" aria-label="Prethodna">⏮</button><button id="playBtn" aria-label="Pokreni ili pauziraj">▶</button><button id="nextBtn" aria-label="Sljedeća">⏭</button></div>
+<nav class="nav"><button class="active" data-view="homeView"><span>⌂</span>Početna</button><button data-view="artistsView"><span>◉</span>Izvođači</button><button data-view="playlistsView"><span>▤</span>Playliste</button><button data-view="helpView"><span>ⓘ</span>Upute</button></nav>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+let songs=[], current=-1, playing=false, activeFilter='all', activeView='homeView', playlists=[];
+let audio=new Audio(); audio.preload='metadata';
+function cleanName(s){return s.replace(/\.[^.]+$/,'').replace(/[_]+/g,' ').replace(/\s+/g,' ').trim()}
+function parseSong(file){
+ let base=cleanName(file.name), artist='Nepoznat izvođač', title=base;
+ if(base.includes(' - ')){let p=base.split(' - ');artist=p.shift().trim()||artist;title=p.join(' - ').trim()}
+ return {id:Date.now()+Math.random(),file,name:title||base,artist,url:URL.createObjectURL(file),favorite:false,added:Date.now()};
+}
+function countText(n){return n+' '+(n===1?'pjesma':'pjesama')}
+function render(){
+ $('songCount').textContent=countText(songs.length);
+ let q=$('search').value.toLowerCase().trim();
+ let shown=songs.filter(s=>(s.name+' '+s.artist).toLowerCase().includes(q)&&(activeFilter!=='favorites'||s.favorite));
+ if(activeFilter==='recent')shown=[...shown].sort((a,b)=>b.added-a.added);
+ $('songList').innerHTML='';
+ if(!shown.length){$('songList').innerHTML=`<div class="empty">${songs.length?'Nema rezultata za tu pretragu.':'Još nema pjesama.<br>Dodaj svoje MP3 datoteke i kreni slušati.'}</div>`}
+ shown.forEach(s=>{
+  let idx=songs.indexOf(s), row=document.createElement('div');row.className='song';
+  row.innerHTML=`<div class="cover">♫</div><div class="songinfo"><b></b><small></small></div><button title="Omiljena">${s.favorite?'♥':'♡'}</button><button title="Više opcija">⋯</button>`;
+  row.querySelector('b').textContent=s.name;row.querySelector('small').textContent=s.artist;
+  row.querySelector('.cover').onclick=()=>playIndex(idx);row.querySelector('.songinfo').onclick=()=>playIndex(idx);
+  row.querySelectorAll('button')[0].onclick=()=>{s.favorite=!s.favorite;render()};
+  row.querySelectorAll('button')[1].onclick=()=>songMenu(s);
+  $('songList').appendChild(row);
+ });
+ renderArtists();renderPlaylists();updatePlayer();
+}
+function songMenu(s){
+ let choice=prompt('Uredi pjesmu:\n1 = promijeni izvođača\n2 = promijeni naziv\n3 = ukloni pjesmu\nOdaberi 1, 2 ili 3');
+ if(choice==='1'){let a=prompt('Ime izvođača:',s.artist);if(a&&a.trim())s.artist=a.trim()}
+ else if(choice==='2'){let n=prompt('Naziv pjesme:',s.name);if(n&&n.trim())s.name=n.trim()}
+ else if(choice==='3'){if(confirm('Ukloniti '+s.name+' iz biblioteke?')){if(current===songs.indexOf(s)){audio.pause();playing=false;current=-1}}}
+ render();
+}
+function renderArtists(){
+ let map={};songs.forEach(s=>{map[s.artist]=(map[s.artist]||0)+1});
+ let q=$('artistSearch').value.toLowerCase();let list=Object.entries(map).filter(([a])=>a.toLowerCase().includes(q)).sort((a,b)=>a[0].localeCompare(b[0],'hr'));
+ $('artistList').innerHTML='';
+ if(!list.length){$('artistList').innerHTML='<div class="empty">Izvođači će se pojaviti kad dodaš pjesme.</div>';return}
+ list.forEach(([name,n])=>{let el=document.createElement('div');el.className='artistrow';el.innerHTML='<div class="artistcircle">♫</div><div class="artistname"></div><button class="secondary">Pusti</button>';el.querySelector('.artistname').innerHTML='';el.querySelector('.artistname').textContent=name;let small=document.createElement('small');small.textContent=countText(n);el.querySelector('.artistname').appendChild(small);el.querySelector('button').onclick=()=>{let arr=songs.filter(s=>s.artist===name);if(arr.length)playIndex(songs.indexOf(arr[0]))};el.onclick=e=>{if(e.target.tagName!=='BUTTON'){ $('search').value=name;showView('homeView');render()}};$('artistList').appendChild(el)})
+}
+function renderPlaylists(){
+ $('playlistList').innerHTML='';
+ if(!playlists.length){$('playlistList').innerHTML='<div class="empty">Tvoje playliste pojavit će se ovdje kad napraviš prvu.</div>';return}
+ playlists.forEach(p=>{let el=document.createElement('div');el.className='tile';el.style.marginBottom='8px';el.style.width='100%';el.innerHTML='<span class="tile-art">▤</span><span style="flex:1"><b></b><small></small></span><button class="secondary">Pusti</button>';el.querySelector('b').textContent=p.name;el.querySelector('small').textContent=countText(p.ids.length);el.querySelector('button').onclick=()=>{let s=songs.find(x=>p.ids.includes(x.id));if(s)playIndex(songs.indexOf(s));else alert('Dodaj pjesme u playlistu iz izbornika ⋯ uz pjesmu.')};$('playlistList').appendChild(el)})
+}
+function updatePlayer(){
+ if(current<0||!songs[current]){$('nowTitle').textContent='Ništa se ne reproducira';$('nowArtist').textContent='Dodaj svoje pjesme';$('playBtn').textContent='▶';$('nowCover').textContent='♫';return}
+ let s=songs[current];$('nowTitle').textContent=s.name;$('nowArtist').textContent=s.artist;$('playBtn').textContent=playing?'Ⅱ':'▶';
+}
+function playIndex(i){if(i<0||i>=songs.length)return;current=i;audio.src=songs[i].url;audio.play().then(()=>{playing=true;updatePlayer()}).catch(()=>{playing=false;updatePlayer();alert('Dodirni ▶ za početak reprodukcije.')});updatePlayer()}
+function next(){if(!songs.length)return;playIndex((current+1+songs.length)%songs.length)}
+function prev(){if(!songs.length)return;if(audio.currentTime>3){audio.currentTime=0;return}playIndex((current-1+songs.length)%songs.length)}
+audio.addEventListener('ended',next);audio.addEventListener('play',()=>{playing=true;updatePlayer()});audio.addEventListener('pause',()=>{playing=false;updatePlayer()});
+$('importBtn').onclick=()=>$('fileInput').click();
+$('fileInput').onchange=e=>{let files=[...e.target.files].filter(f=>/\.mp3$/i.test(f.name)||f.type.startsWith('audio/'));files.forEach(f=>songs.push(parseSong(f)));e.target.value='';render();if(files.length)alert('Dodano '+countText(files.length)+'. Ako naziv datoteke izgleda „Šaban Šaulić - Dođi da ostarimo zajedno.mp3”, aplikacija će razvrstati izvođača i pjesmu automatski.');};
+$('search').oninput=render;$('artistSearch').oninput=renderArtists;
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');activeFilter=b.dataset.filter;render()});
+$('playBtn').onclick=()=>{if(current<0){if(songs.length)playIndex(0);return}if(audio.paused){audio.play().catch(()=>{});playing=true}else{audio.pause();playing=false}updatePlayer()};
+$('nextBtn').onclick=next;$('prevBtn').onclick=prev;
+$('shuffleBtn').onclick=()=>{if(!songs.length){alert('Prvo dodaj pjesme.');return}playIndex(Math.floor(Math.random()*songs.length))};
+$('allTile').onclick=()=>{activeFilter='all';document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.filter==='all'));render()};
+$('artistTile').onclick=()=>showView('artistsView');
+$('newPlaylist').onclick=()=>{if(!songs.length){alert('Prvo dodaj nekoliko pjesama.');return}let name=prompt('Naziv playliste:');if(!name||!name.trim())return;let ids=[];let raw=prompt('Upiši brojeve pjesama odvojene zarezom (npr. 1,3,5). Popis će biti prikazan u sljedećem koraku.');if(raw){raw.split(',').map(x=>parseInt(x.trim(),10)-1).filter(i=>i>=0&&i<songs.length).forEach(i=>ids.push(songs[i].id))}playlists.push({name:name.trim(),ids});renderPlaylists()};
+function showView(id){activeView=id;['homeView','artistsView','playlistsView','helpView'].forEach(x=>$(x).classList.toggle('hidden',x!==id));document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===id));}
+document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>showView(b.dataset.view));
+$('settingsBtn').onclick=()=>showView('helpView');
+render();
+</script>
+</body></html>

@@ -42,7 +42,7 @@ main{padding:0 16px}.welcome{padding:12px 2px 18px}.eyebrow{color:var(--green);f
 </div>
 <div class="sectionhead"><h3 id="listTitle">Tvoja glazba</h3><button class="secondary" id="shuffleBtn">⤨ Shuffle</button></div>
 <div id="songList" class="list"></div>
-<div class="notice">Savjet: MP3 datoteke koje uvezeš ostaju dostupne ovoj stranici dok podaci preglednika nisu obrisani. Ova je prva verzija prototip, a ne još App Store aplikacija.</div>
+<div class="notice">Pjesme se spremaju lokalno na ovom uređaju. Prvi put otvori aplikaciju s internetom; nakon što se učita, osnovna stranica može se otvoriti i bez interneta. Nemoj brisati podatke preglednika ako želiš sačuvati pjesme.</div>
 </section>
 <section id="artistsView" class="hidden">
 <div class="welcome"><div class="eyebrow">Tvoja kolekcija</div><h2>Izvođači</h2><p>Pjesme razvrstane po izvođaču.</p></div>
@@ -67,6 +67,11 @@ main{padding:0 16px}.welcome{padding:12px 2px 18px}.eyebrow{color:var(--green);f
 <script>
 const $=id=>document.getElementById(id);
 let songs=[], current=-1, playing=false, activeFilter='all', activeView='homeView', playlists=[];
+const DB_NAME='dernek-music-db', DB_STORE='songs';
+function openSongDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,1);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(DB_STORE))req.result.createObjectStore(DB_STORE,{keyPath:'id'})};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
+async function saveSong(s){try{const db=await openSongDB();await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put({id:s.id,name:s.name,artist:s.artist,favorite:s.favorite,added:s.added,blob:s.file});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close()}catch(e){console.warn('Pjesma nije spremljena',e)}}
+async function removeSavedSong(id){try{const db=await openSongDB();await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).delete(id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close()}catch(e){console.warn('Pjesma nije uklonjena',e)}}
+async function restoreSongs(){try{const db=await openSongDB();const saved=await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readonly');const req=tx.objectStore(DB_STORE).getAll();req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)});db.close();songs=saved.map(s=>({...s,file:s.blob,url:URL.createObjectURL(s.blob)}));render()}catch(e){console.warn('Nije moguće vratiti pjesme',e)}}
 let audio=new Audio(); audio.preload='metadata';
 function cleanName(s){return s.replace(/\.[^.]+$/,'').replace(/[_]+/g,' ').replace(/\s+/g,' ').trim()}
 function parseSong(file){
@@ -87,7 +92,7 @@ function render(){
   row.innerHTML=`<div class="cover">♫</div><div class="songinfo"><b></b><small></small></div><button title="Omiljena">${s.favorite?'♥':'♡'}</button><button title="Više opcija">⋯</button>`;
   row.querySelector('b').textContent=s.name;row.querySelector('small').textContent=s.artist;
   row.querySelector('.cover').onclick=()=>playIndex(idx);row.querySelector('.songinfo').onclick=()=>playIndex(idx);
-  row.querySelectorAll('button')[0].onclick=()=>{s.favorite=!s.favorite;render()};
+  row.querySelectorAll('button')[0].onclick=()=>{s.favorite=!s.favorite;saveSong(s);render()};
   row.querySelectorAll('button')[1].onclick=()=>songMenu(s);
   $('songList').appendChild(row);
  });
@@ -97,7 +102,8 @@ function songMenu(s){
  let choice=prompt('Uredi pjesmu:\n1 = promijeni izvođača\n2 = promijeni naziv\n3 = ukloni pjesmu\nOdaberi 1, 2 ili 3');
  if(choice==='1'){let a=prompt('Ime izvođača:',s.artist);if(a&&a.trim())s.artist=a.trim()}
  else if(choice==='2'){let n=prompt('Naziv pjesme:',s.name);if(n&&n.trim())s.name=n.trim()}
- else if(choice==='3'){if(confirm('Ukloniti '+s.name+' iz biblioteke?')){if(current===songs.indexOf(s)){audio.pause();playing=false;current=-1}}}
+ else if(choice==='3'){if(confirm('Ukloniti '+s.name+' iz biblioteke?')){if(current===songs.indexOf(s)){audio.pause();playing=false;current=-1}removeSavedSong(s.id);songs=songs.filter(x=>x!==s)}}
+ saveSong(s);
  render();
 }
 function renderArtists(){
@@ -121,7 +127,7 @@ function next(){if(!songs.length)return;playIndex((current+1+songs.length)%songs
 function prev(){if(!songs.length)return;if(audio.currentTime>3){audio.currentTime=0;return}playIndex((current-1+songs.length)%songs.length)}
 audio.addEventListener('ended',next);audio.addEventListener('play',()=>{playing=true;updatePlayer()});audio.addEventListener('pause',()=>{playing=false;updatePlayer()});
 $('importBtn').onclick=()=>$('fileInput').click();
-$('fileInput').onchange=e=>{let files=[...e.target.files].filter(f=>/\.mp3$/i.test(f.name)||f.type.startsWith('audio/'));files.forEach(f=>songs.push(parseSong(f)));e.target.value='';render();if(files.length)alert('Dodano '+countText(files.length)+'. Ako naziv datoteke izgleda „Šaban Šaulić - Dođi da ostarimo zajedno.mp3”, aplikacija će razvrstati izvođača i pjesmu automatski.');};
+ $('fileInput').onchange=e=>{let files=[...e.target.files].filter(f=>/\.mp3$/i.test(f.name)||f.type.startsWith('audio/'));files.forEach(f=>{const s=parseSong(f);songs.push(s);saveSong(s)});e.target.value='';render();if(files.length)alert('Dodano '+countText(files.length)+'. Pjesme se spremaju na ovom uređaju i mogu biti dostupne bez interneta nakon što se aplikacija učita.');};
 $('search').oninput=render;$('artistSearch').oninput=renderArtists;
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');activeFilter=b.dataset.filter;render()});
 $('playBtn').onclick=()=>{if(current<0){if(songs.length)playIndex(0);return}if(audio.paused){audio.play().catch(()=>{});playing=true}else{audio.pause();playing=false}updatePlayer()};
@@ -133,6 +139,7 @@ $('newPlaylist').onclick=()=>{if(!songs.length){alert('Prvo dodaj nekoliko pjesa
 function showView(id){activeView=id;['homeView','artistsView','playlistsView','helpView'].forEach(x=>$(x).classList.toggle('hidden',x!==id));document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===id));}
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 $('settingsBtn').onclick=()=>showView('helpView');
-render();
+if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(e=>console.warn('Offline podrška nije aktivirana',e));
+render();restoreSongs();
 </script>
 </body></html>

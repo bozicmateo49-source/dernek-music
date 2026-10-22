@@ -127,7 +127,11 @@ function renderMusicResults(rootId='musicResults', results=musicSearchResults){
  if(!results.length){root.innerHTML='<div class="empty">Nema rezultata. Probaj upisati ime izvođača ili naziv pjesme.</div>';return}
  results.forEach(track=>{
   const row=document.createElement('div');row.className='music-result';
-  const img=document.createElement('img');img.src=track.artworkUrl100||'';img.alt='Naslovnica albuma';img.loading='lazy';
+  const img=document.createElement('img');
+  const artwork=track.artworkUrl100||track.artworkUrl60||track.artworkUrl30||'';
+  img.src=artwork?artwork.replace(/\d+x\d+bb(?=\.)/,'600x600bb'):'';
+  img.alt='Naslovnica albuma';img.loading='lazy';img.referrerPolicy='no-referrer';
+  img.onerror=()=>{if(artwork&&img.src!==artwork){img.onerror=()=>{img.style.display='none';const fallback=document.createElement('div');fallback.textContent='♫';fallback.style.cssText='width:72px;height:72px;flex-shrink:0;border-radius:7px;background:#252525;display:grid;place-items:center;font-size:28px;color:var(--green)';img.replaceWith(fallback);};img.src=artwork;}else{img.style.display='none';const fallback=document.createElement('div');fallback.textContent='♫';fallback.style.cssText='width:72px;height:72px;flex-shrink:0;border-radius:7px;background:#252525;display:grid;place-items:center;font-size:28px;color:var(--green)';img.replaceWith(fallback);}};
   const info=document.createElement('div');info.className='music-result-info';
   const title=document.createElement('b');title.textContent=track.trackName||'Nepoznata pjesma';
   const artist=document.createElement('small');artist.textContent=(track.artistName||'Nepoznat izvođač')+' · '+(track.collectionName||'Singl');

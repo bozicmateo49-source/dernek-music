@@ -72,7 +72,11 @@ main{padding:0 16px}.welcome{padding:12px 2px 18px}.eyebrow{color:var(--green);f
 <div class="radio-tools"><button class="tab active" data-radio="balkan">Balkan</button><button class="tab" data-radio="HR">Hrvatska</button><button class="tab" data-radio="BA">BiH</button><button class="tab" data-radio="RS">Srbija</button><button class="tab" data-radio="folk">Narodna</button><button class="tab" data-radio="favorites">♥ Omiljene</button></div>
 <div id="radioStatus" class="radio-status">Kad otvoriš ovu stranicu, ovdje ćemo pronaći internetske radijske postaje.</div>
 <div id="radioList" class="list"></div>
-<div class="notice">Online radio pušta ono što emitira odabrana postaja, ne biraš pojedinačnu pjesmu kao u Spotifyju. Za pjesme na zahtjev trebaju nam izvori koji imaju pravo nuditi tu glazbu. Reprodukcija koristi mobilne podatke.</div>
+<div class="sectionhead"><h3>🎵 Pjesme online</h3><span class="muted">Naslovnice i pregledi</span></div>
+<div class="notice" style="margin:0 0 8px">Isti upit traži i pjesme. Dodirni ▶ za kratki pregled ili YouTube za slušanje cijele pjesme gdje je dostupna.</div>
+<div id="onlineMusicStatus" class="radio-status">Upiši izvođača, npr. Šaban Šaulić, u polje iznad.</div>
+<div id="onlineMusicResults" class="list"></div>
+<div class="notice">Radio svira uživo; pjesme na zahtjev ovise o dostupnim pregledima i vanjskim servisima.</div>
 </section>
 <section id="helpView" class="hidden">
 <div class="welcome"><div class="eyebrow">Brzi vodič</div><h2>Kako koristiti</h2></div>
@@ -123,10 +127,10 @@ function parseSong(file){
 function countText(n){return n+' '+(n===1?'pjesma':'pjesama')}
 function recordPlay(s){playStats[String(s.id)]={count:(playStats[String(s.id)]?.count||0)+1,last:Date.now()};try{localStorage.setItem('dernek-play-stats',JSON.stringify(playStats))}catch(e){}renderQuickPicks()}
 function renderQuickPicks(){const root=$('quickPicks');if(!root)return;root.innerHTML='';let picks=[...songs].sort((a,b)=>{const aa=playStats[String(a.id)]||{},bb=playStats[String(b.id)]||{};return (bb.count||0)-(aa.count||0)||(bb.last||b.added)-(aa.last||a.added)}).slice(0,6);if(!picks.length){root.innerHTML='<div class="empty" style="grid-column:1/-1">Dodaj pjesme pritiskom na ＋ gore desno. Ovdje će se pojaviti tvoje česte i nedavne pjesme.</div>';return}picks.forEach(s=>{const b=document.createElement('button');b.className='quickpick';b.innerHTML='<span class="tile-art">♫</span><span style="min-width:0"><b></b><small></small></span>';b.querySelector('b').textContent=s.name;b.querySelector('small').textContent=s.artist;b.onclick=()=>{const i=songs.indexOf(s);if(i>=0)playIndex(i)};root.appendChild(b)})}
-function renderMusicResults(){
- const root=$('musicResults');if(!root)return;root.innerHTML='';
- if(!musicSearchResults.length){root.innerHTML='<div class="empty">Nema rezultata. Probaj upisati ime izvođača ili naziv pjesme.</div>';return}
- musicSearchResults.forEach(track=>{
+function renderMusicResults(rootId='musicResults', results=musicSearchResults){
+ const root=$(rootId);if(!root)return;root.innerHTML='';
+ if(!results.length){root.innerHTML='<div class="empty">Nema rezultata. Probaj upisati ime izvođača ili naziv pjesme.</div>';return}
+ results.forEach(track=>{
   const row=document.createElement('div');row.className='music-result';
   const img=document.createElement('img');img.src=track.artworkUrl100||'';img.alt='Naslovnica albuma';img.loading='lazy';
   const info=document.createElement('div');info.className='music-result-info';
@@ -140,16 +144,18 @@ function renderMusicResults(){
   actions.append(play,link,youtube);row.append(img,info,actions);root.appendChild(row);
  });
 }
-async function searchMusic(){
- const query=$('musicQuery').value.trim();if(!query){$('musicSearchStatus').textContent='Upiši izvođača ili pjesmu.';return}
- $('musicSearchStatus').textContent='Pretražujem glazbeni katalog…';$('musicResults').innerHTML='';
+async function searchMusic(queryOverride=null,statusId='musicSearchStatus',resultsId='musicResults'){
+ const query=(queryOverride===null?($('musicQuery')?.value||''):queryOverride).trim();
+ const status=$(statusId),root=$(resultsId);
+ if(!query){if(status)status.textContent='Upiši izvođača ili pjesmu.';if(root)root.innerHTML='';return}
+ if(status)status.textContent='Pretražujem glazbeni katalog…';if(root)root.innerHTML='';
  try{
   const url='https://itunes.apple.com/search?term='+encodeURIComponent(query)+'&country=hr&media=music&entity=song&limit=35';
   const response=await fetch(url);if(!response.ok)throw new Error('Katalog trenutno nije dostupan');
   const data=await response.json();musicSearchResults=(data.results||[]).filter(t=>t.kind==='song');
-  $('musicSearchStatus').textContent=musicSearchResults.length?'Pronađeno '+musicSearchResults.length+' rezultata. Dodirni ▶ za kratki pregled ili Apple Music za cijelu pjesmu.':'Nema rezultata za taj upit.';
-  renderMusicResults();
- }catch(e){$('musicSearchStatus').textContent='Ne mogu pretražiti katalog. Provjeri internet i pokušaj ponovno.';console.warn('Music search failed',e)}
+  if(status)status.textContent=musicSearchResults.length?'Pronađeno '+musicSearchResults.length+' rezultata. ▶ je kratki pregled; YouTube/Apple Music otvara vanjski servis.':'Nema rezultata za taj upit.';
+  renderMusicResults(resultsId,musicSearchResults);
+ }catch(e){if(status)status.textContent='Ne mogu pretražiti katalog. Provjeri internet i pokušaj ponovno.';console.warn('Music search failed',e)}
 }
 function playOnlineTrack(track){
  if(!track||!track.previewUrl){$('musicSearchStatus').textContent='Za ovu pjesmu nije dostupan kratki pregled. Otvori je u Apple Musicu.';return}
@@ -316,8 +322,16 @@ function showView(id){activeView=id;['homeView','musicSearchView','radioView','a
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 $('settingsBtn').onclick=()=>showView('helpView');
 $('musicSearchBtn').onclick=searchMusic;$('musicQuery').addEventListener('keydown',e=>{if(e.key==='Enter')searchMusic()});
-$('radioSearchBtn').onclick=()=>searchRadios({filter:radioFilter,name:$('radioSearch').value,country:['HR','BA','RS'].includes(radioFilter)?radioFilter:''});
-$('radioSearch').addEventListener('keydown',e=>{if(e.key==='Enter')$('radioSearchBtn').click()});
+let onlineSearchTimer=null;
+function searchOnlineBoth(){
+ const q=$('radioSearch').value.trim();
+ searchRadios({filter:radioFilter,name:q,country:['HR','BA','RS'].includes(radioFilter)?radioFilter:''});
+ if(q.length>=2)searchMusic(q,'onlineMusicStatus','onlineMusicResults');
+ else{$('onlineMusicStatus').textContent='Upiši izvođača, npr. Šaban Šaulić, u polje iznad.';$('onlineMusicResults').innerHTML=''}
+}
+$('radioSearchBtn').onclick=searchOnlineBoth;
+$('radioSearch').addEventListener('input',()=>{clearTimeout(onlineSearchTimer);const q=$('radioSearch').value.trim();if(q.length<2){$('onlineMusicStatus').textContent='Upiši izvođača, npr. Šaban Šaulić, u polje iznad.';$('onlineMusicResults').innerHTML='';return}$('onlineMusicStatus').textContent='Tražim pjesme i radijske postaje…';onlineSearchTimer=setTimeout(searchOnlineBoth,450)});
+$('radioSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){clearTimeout(onlineSearchTimer);searchOnlineBoth()}});
 document.querySelectorAll('[data-radio]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-radio]').forEach(x=>x.classList.toggle('active',x===b));const f=b.dataset.radio;if(f==='HR'||f==='BA'||f==='RS')searchRadios({filter:f,country:f,name:$('radioSearch').value});else if(f==='folk')searchRadios({filter:'folk',tag:'folk',name:$('radioSearch').value});else if(f==='favorites')searchRadios({filter:'favorites'});else searchRadios({filter:'balkan',name:$('radioSearch').value})});
 if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(e=>console.warn('Offline podrška nije aktivirana',e));
 try{playStats=JSON.parse(localStorage.getItem('dernek-play-stats')||'{}')||{}}catch(e){playStats={}}restorePlaylists();render();restoreSongs();

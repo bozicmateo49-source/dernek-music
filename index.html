@@ -67,16 +67,11 @@ main{padding:0 16px}.welcome{padding:12px 2px 18px}.eyebrow{color:var(--green);f
 <div class="notice">Pregledi pjesama dostupni su iz Appleovog kataloga i traju približno 30 sekundi. Dodirni „Apple Music” za cijelu pjesmu ako je dostupna uz tvoj račun ili pretplatu. Pregledi i naslovnice služe za promociju sadržaja iz Appleova kataloga. <a href="https://www.apple.com/apple-music/" target="_blank" rel="noopener" style="color:var(--green)">Apple Music</a></div>
 </section>
 <section id="radioView" class="hidden">
-<div class="welcome"><div class="eyebrow">Uživo preko interneta</div><h2>Online radio</h2><p>Slušaj radijske postaje preko mobilnih podataka ili Wi-Fi-ja.</p></div>
-<div class="radio-search"><input id="radioSearch" type="search" placeholder="Traži radio ili žanr…" autocomplete="off"><button id="radioSearchBtn">Traži</button></div>
-<div class="radio-tools"><button class="tab active" data-radio="balkan">Balkan</button><button class="tab" data-radio="HR">Hrvatska</button><button class="tab" data-radio="BA">BiH</button><button class="tab" data-radio="RS">Srbija</button><button class="tab" data-radio="folk">Narodna</button><button class="tab" data-radio="favorites">♥ Omiljene</button></div>
-<div id="radioStatus" class="radio-status">Kad otvoriš ovu stranicu, ovdje ćemo pronaći internetske radijske postaje.</div>
-<div id="radioList" class="list"></div>
-<div class="sectionhead"><h3>🎵 Pjesme online</h3><span class="muted">Naslovnice i pregledi</span></div>
-<div class="notice" style="margin:0 0 8px">Isti upit traži i pjesme. Dodirni ▶ za kratki pregled ili YouTube za slušanje cijele pjesme gdje je dostupna.</div>
-<div id="onlineMusicStatus" class="radio-status">Upiši izvođača, npr. Šaban Šaulić, u polje iznad.</div>
+<div class="welcome"><div class="eyebrow">Glazba preko interneta</div><h2>Pronađi i pusti pjesmu</h2><p>Upiši naziv pjesme ili izvođača. Prikazat ću naslovnice albuma i dostupne snimke.</p></div>
+<div class="music-searchbox"><input id="radioSearch" type="search" placeholder="Npr. Šaban Šaulić — Dođi da ostarimo zajedno" autocomplete="off"><button id="radioSearchBtn">Traži</button></div>
+<div id="onlineMusicStatus" class="radio-status">Upiši pjesmu ili izvođača i pričekaj rezultate.</div>
 <div id="onlineMusicResults" class="list"></div>
-<div class="notice">Radio svira uživo; pjesme na zahtjev ovise o dostupnim pregledima i vanjskim servisima.</div>
+<div class="notice">▶ pušta dostupni kratki glazbeni pregled. Za cijelu pjesmu dodirni YouTube uz rezultat — otvorit će se snimke za tu pjesmu. Cijela pjesma izravno u aplikaciji zahtijeva podržan i licenciran glazbeni servis.</div>
 </section>
 <section id="helpView" class="hidden">
 <div class="welcome"><div class="eyebrow">Brzi vodič</div><h2>Kako koristiti</h2></div>
@@ -106,7 +101,7 @@ document.querySelector('.nav').addEventListener('click',e=>{
  const id=b.dataset.view;
  document.querySelectorAll('main > section').forEach(s=>s.classList.toggle('hidden',s.id!==id));
  document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x===b));
- if(id==='radioView'&&!radioLoaded)searchRadios({filter:'balkan'});
+
 },true);
 let songs=[], current=-1, playing=false, activeFilter='all', activeView='homeView', playlists=[], playQueue=[], queuePos=-1, playStats={};
 let radioResults=[], currentStation=null, radioLoaded=false, radioFavorites=[], radioFavoriteData=[];
@@ -318,21 +313,19 @@ $('nextBtn').onclick=next;$('prevBtn').onclick=prev;
 $('allTile').onclick=()=>{activeFilter='all';document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.filter==='all'));render()};
 $('artistTile').onclick=()=>showView('artistsView');
 $('newPlaylist').onclick=()=>{let name=prompt('Naziv playliste:');if(!name||!name.trim())return;const clean=name.trim();const q=clean.toLocaleLowerCase('hr');const matches=songs.filter(s=>(s.artist+' '+s.name).toLocaleLowerCase('hr').includes(q));playlists.push({name:clean,ids:matches.map(s=>s.id)});savePlaylists();renderPlaylists();if(matches.length)alert('Playlista „'+clean+'“ napravljena je s '+countText(matches.length)+' koje odgovaraju nazivu. Možeš dodati još pjesama.');else openPlaylistEditor(playlists[playlists.length-1])};
-function showView(id){activeView=id;['homeView','musicSearchView','radioView','artistsView','playlistsView','helpView'].forEach(x=>$(x).classList.toggle('hidden',x!==id));if(id==='radioView'&&!radioLoaded)searchRadios({filter:'balkan'});document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===id));}
+function showView(id){activeView=id;['homeView','musicSearchView','radioView','artistsView','playlistsView','helpView'].forEach(x=>$(x).classList.toggle('hidden',x!==id));document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===id));}
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 $('settingsBtn').onclick=()=>showView('helpView');
 $('musicSearchBtn').onclick=searchMusic;$('musicQuery').addEventListener('keydown',e=>{if(e.key==='Enter')searchMusic()});
 let onlineSearchTimer=null;
-function searchOnlineBoth(){
+function searchOnlineSongs(){
  const q=$('radioSearch').value.trim();
- searchRadios({filter:radioFilter,name:q,country:['HR','BA','RS'].includes(radioFilter)?radioFilter:''});
  if(q.length>=2)searchMusic(q,'onlineMusicStatus','onlineMusicResults');
- else{$('onlineMusicStatus').textContent='Upiši izvođača, npr. Šaban Šaulić, u polje iznad.';$('onlineMusicResults').innerHTML=''}
+ else{$('onlineMusicStatus').textContent='Upiši pjesmu ili izvođača i pričekaj rezultate.';$('onlineMusicResults').innerHTML=''}
 }
-$('radioSearchBtn').onclick=searchOnlineBoth;
-$('radioSearch').addEventListener('input',()=>{clearTimeout(onlineSearchTimer);const q=$('radioSearch').value.trim();if(q.length<2){$('onlineMusicStatus').textContent='Upiši izvođača, npr. Šaban Šaulić, u polje iznad.';$('onlineMusicResults').innerHTML='';return}$('onlineMusicStatus').textContent='Tražim pjesme i radijske postaje…';onlineSearchTimer=setTimeout(searchOnlineBoth,450)});
-$('radioSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){clearTimeout(onlineSearchTimer);searchOnlineBoth()}});
-document.querySelectorAll('[data-radio]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-radio]').forEach(x=>x.classList.toggle('active',x===b));const f=b.dataset.radio;if(f==='HR'||f==='BA'||f==='RS')searchRadios({filter:f,country:f,name:$('radioSearch').value});else if(f==='folk')searchRadios({filter:'folk',tag:'folk',name:$('radioSearch').value});else if(f==='favorites')searchRadios({filter:'favorites'});else searchRadios({filter:'balkan',name:$('radioSearch').value})});
+$('radioSearchBtn').onclick=searchOnlineSongs;
+$('radioSearch').addEventListener('input',()=>{clearTimeout(onlineSearchTimer);const q=$('radioSearch').value.trim();if(q.length<2){$('onlineMusicStatus').textContent='Upiši pjesmu ili izvođača i pričekaj rezultate.';$('onlineMusicResults').innerHTML='';return}$('onlineMusicStatus').textContent='Tražim pjesme i naslovnice…';onlineSearchTimer=setTimeout(searchOnlineSongs,450)});
+$('radioSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){clearTimeout(onlineSearchTimer);searchOnlineSongs()}});
 if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(e=>console.warn('Offline podrška nije aktivirana',e));
 try{playStats=JSON.parse(localStorage.getItem('dernek-play-stats')||'{}')||{}}catch(e){playStats={}}restorePlaylists();render();restoreSongs();
 </script>

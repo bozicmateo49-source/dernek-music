@@ -126,7 +126,8 @@ function renderMusicResults(){
   const actions=document.createElement('div');actions.className='music-result-actions';
   const play=document.createElement('button');play.textContent='▶';play.title='Poslušaj kratki pregled';play.disabled=!track.previewUrl;play.style.opacity=track.previewUrl?'1':'.45';play.onclick=()=>playOnlineTrack(track);
   const link=document.createElement('a');link.textContent='Apple Music';link.href=track.trackViewUrl||'https://music.apple.com/hr/browse';link.target='_blank';link.rel='noopener';
-  actions.append(play,link);row.append(img,info,actions);root.appendChild(row);
+  const youtube=document.createElement('a');youtube.textContent='YouTube';youtube.href='https://www.youtube.com/results?search_query='+encodeURIComponent((track.artistName||'')+' '+(track.trackName||'')+' official audio');youtube.target='_blank';youtube.rel='noopener';
+  actions.append(play,link,youtube);row.append(img,info,actions);root.appendChild(row);
  });
 }
 async function searchMusic(){

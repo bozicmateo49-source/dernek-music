@@ -110,14 +110,41 @@ try{radioFavorites=JSON.parse(localStorage.getItem('dernek-radio-favorites')||'[
 try{radioFavoriteData=JSON.parse(localStorage.getItem('dernek-radio-favorite-data')||'[]')||[]}catch(e){radioFavoriteData=[]}
 const DB_NAME='dernek-music-db', DB_STORE='songs';
 function openSongDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,1);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(DB_STORE))req.result.createObjectStore(DB_STORE,{keyPath:'id'})};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
-async function saveSong(s){try{const db=await openSongDB();await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put({id:s.id,name:s.name,artist:s.artist,favorite:s.favorite,added:s.added,blob:s.file});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close()}catch(e){console.warn('Pjesma nije spremljena',e)}}
-async function restoreSongs(){try{const db=await openSongDB();const saved=await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readonly');const req=tx.objectStore(DB_STORE).getAll();req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)});db.close();songs=saved.map(s=>({...s,file:s.blob,url:URL.createObjectURL(s.blob)}));render()}catch(e){console.warn('Nije moguće vratiti pjesme',e)}}
+async function saveSong(s){try{const db=await openSongDB();await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put({id:s.id,name:s.name,artist:s.artist,favorite:s.favorite,added:s.added,blob:s.file,artworkUrl:s.artworkUrl||'',artworkBlob:s.artworkBlob||null});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close()}catch(e){console.warn('Pjesma nije spremljena',e)}}
+async function restoreSongs(){try{const db=await openSongDB();const saved=await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readonly');const req=tx.objectStore(DB_STORE).getAll();req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)});db.close();songs=saved.map(s=>({...s,file:s.blob,url:URL.createObjectURL(s.blob),artworkObjectUrl:s.artworkBlob?URL.createObjectURL(s.artworkBlob):(s.artworkUrl||'')}));render();warmArtworkLookup()}catch(e){console.warn('Nije moguće vratiti pjesme',e)}}
 let audio=document.createElement('audio'); audio.preload='auto'; audio.setAttribute('playsinline',''); audio.setAttribute('webkit-playsinline',''); audio.style.display='none'; document.body.appendChild(audio);
 function cleanName(s){return s.replace(/\.[^.]+$/,'').replace(/[_]+/g,' ').replace(/\s+/g,' ').trim()}
 function parseSong(file){
  let base=cleanName(file.name), artist='Nepoznat izvođač', title=base;
  if(base.includes(' - ')){let p=base.split(' - ');artist=p.shift().trim()||artist;title=p.join(' - ').trim()}
  return {id:Date.now()+Math.random(),file,name:title||base,artist,url:URL.createObjectURL(file),favorite:false,added:Date.now()};
+}
+async function lookupArtwork(song){
+ if(!song||song.artworkObjectUrl||song.artworkUrl||!navigator.onLine)return;
+ try{
+  const term=(song.artist+' '+song.name).trim();
+  let track=null;
+  for(const country of ['hr','rs','ba','us']){
+   const response=await fetch('https://itunes.apple.com/search?term='+encodeURIComponent(term)+'&country='+country+'&media=music&entity=song&limit=8');
+   if(!response.ok)continue;
+   const data=await response.json();
+   const list=data.results||[];
+   track=list.find(t=>t.artworkUrl100&&((t.trackName||'').toLowerCase().includes(song.name.toLowerCase())||(song.name.toLowerCase().includes((t.trackName||'').toLowerCase()))))||list.find(t=>t.artworkUrl100);
+   if(track)break;
+  }
+  if(!track||!track.artworkUrl100)return;
+  song.artworkUrl=track.artworkUrl100.replace(/\d+x\d+bb(?=\.)/,'600x600bb');
+  try{const imageResponse=await fetch(song.artworkUrl);if(imageResponse.ok){song.artworkBlob=await imageResponse.blob();song.artworkObjectUrl=URL.createObjectURL(song.artworkBlob)}}catch(e){}
+  await saveSong(song);render();
+ }catch(e){console.warn('Naslovnicu nije moguće pronaći',e)}
+}
+async function warmArtworkLookup(){
+ if(!navigator.onLine)return;
+ let done=0;
+ for(const song of songs){
+  if(done>=3)break;
+  if(!song.artworkObjectUrl&&!song.artworkUrl){done++;await lookupArtwork(song)}
+ }
 }
 function countText(n){return n+' '+(n===1?'pjesma':'pjesama')}
 function recordPlay(s){playStats[String(s.id)]={count:(playStats[String(s.id)]?.count||0)+1,last:Date.now()};try{localStorage.setItem('dernek-play-stats',JSON.stringify(playStats))}catch(e){}renderQuickPicks()}
@@ -258,7 +285,7 @@ function render(){
  if(!shown.length){$('songList').innerHTML=`<div class="empty">${songs.length?'Nema rezultata za tu pretragu.':'Još nema pjesama.<br>Dodaj svoje MP3 datoteke i kreni slušati.'}</div>`}
  shown.forEach(s=>{
   let idx=songs.indexOf(s), row=document.createElement('div');row.className='song';
-  row.innerHTML=`<div class="cover">♫</div><div class="songinfo"><b></b><small></small></div><button title="Omiljena">${s.favorite?'♥':'♡'}</button><button title="Više opcija">⋯</button>`;
+  row.innerHTML=`<div class="cover">${s.artworkObjectUrl||s.artworkUrl?'<img src="'+(s.artworkObjectUrl||s.artworkUrl)+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:8px">':'♫'}</div><div class="songinfo"><b></b><small></small></div><button title="Omiljena">${s.favorite?'♥':'♡'}</button><button title="Više opcija">⋯</button>`;
   row.querySelector('b').textContent=s.name;row.querySelector('small').textContent=s.artist;
   row.querySelector('.cover').onclick=()=>playIndex(idx);row.querySelector('.songinfo').onclick=()=>playIndex(idx);
   row.querySelectorAll('button')[0].onclick=()=>{s.favorite=!s.favorite;saveSong(s);render()};
@@ -320,7 +347,7 @@ function updatePlayer(){
  if(currentOnlineTrack){$('nowTitle').textContent=currentOnlineTrack.trackName;$('nowArtist').textContent=currentOnlineTrack.artistName+' · pregled';$('playBtn').textContent=playing?'Ⅱ':'▶';$('nowCover').innerHTML=currentOnlineTrack.artworkUrl100?'<img src="'+currentOnlineTrack.artworkUrl100+'" alt="" style="width:42px;height:42px;border-radius:7px;object-fit:cover">':'♫';$('playerTitle').textContent=currentOnlineTrack.trackName;$('playerArtist').textContent=currentOnlineTrack.artistName+' · pregled od 30 sekundi';$('playerPlay').textContent=playing?'Ⅱ':'▶';$('playerFavorite').textContent='♡';$('playerArt').innerHTML=currentOnlineTrack.artworkUrl100?'<img src="'+currentOnlineTrack.artworkUrl100+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px">':'♫';return}
  if(currentStation){$('nowTitle').textContent=currentStation.name;$('nowArtist').textContent='Uživo · '+(currentStation.country||'Online radio');$('playBtn').textContent=playing?'Ⅱ':'▶';$('nowCover').textContent='◖';$('playerTitle').textContent=currentStation.name;$('playerArtist').textContent='Uživo · '+(currentStation.country||currentStation.tags||'Online radio');$('playerPlay').textContent=playing?'Ⅱ':'▶';$('playerFavorite').textContent=radioFavorites.includes(radioStationId(currentStation))?'♥':'♡';$('playerFavorite').setAttribute('aria-label','Omiljena radijska postaja');return}
  if(current<0||!songs[current]){$('nowTitle').textContent='Ništa se ne reproducira';$('nowArtist').textContent='Dodaj svoje pjesme';$('playBtn').textContent='▶';$('nowCover').textContent='♫';$('playerTitle').textContent='Ništa se ne reproducira';$('playerArtist').textContent='Dodaj svoje pjesme';$('playerPlay').textContent='▶';$('playerFavorite').textContent='♡';return}
- let s=songs[current];$('nowTitle').textContent=s.name;$('nowArtist').textContent=s.artist;$('playBtn').textContent=playing?'Ⅱ':'▶';$('playerTitle').textContent=s.name;$('playerArtist').textContent=s.artist;$('playerPlay').textContent=playing?'Ⅱ':'▶';$('playerFavorite').textContent=s.favorite?'♥':'♡';$('playerFavorite').setAttribute('aria-label',s.favorite?'Ukloni iz omiljenih':'Dodaj u omiljene');
+ let s=songs[current];$('nowTitle').textContent=s.name;$('nowArtist').textContent=s.artist;$('playBtn').textContent=playing?'Ⅱ':'▶';$('nowCover').innerHTML=(s.artworkObjectUrl||s.artworkUrl)?'<img src="'+(s.artworkObjectUrl||s.artworkUrl)+'" alt="" style="width:42px;height:42px;border-radius:7px;object-fit:cover">':'♫';$('playerTitle').textContent=s.name;$('playerArtist').textContent=s.artist;$('playerPlay').textContent=playing?'Ⅱ':'▶';$('playerArt').innerHTML=(s.artworkObjectUrl||s.artworkUrl)?'<img src="'+(s.artworkObjectUrl||s.artworkUrl)+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px">':'♫';$('playerFavorite').textContent=s.favorite?'♥':'♡';$('playerFavorite').setAttribute('aria-label',s.favorite?'Ukloni iz omiljenih':'Dodaj u omiljene');
 }
 function openPlayer(){if(current<0&&!currentStation&&!currentOnlineTrack&&!songs.length){alert('Prvo dodaj pjesme.');return} $('playerOverlay').classList.remove('hidden');syncPlayerProgress()}
 function closePlayer(){ $('playerOverlay').classList.add('hidden') }
@@ -329,7 +356,7 @@ function syncPlayerProgress(){const d=audio.duration;const t=audio.currentTime||
 let seekingPlayer=false;
 function playIndex(i){if(i<0||i>=songs.length)return;startQueue(songs,i,true)}
 function startQueue(arr,start=0,shuffle=false){currentStation=null;currentOnlineTrack=null;let q=[...arr];if(!q.length)return;const first=q.splice(Math.max(0,Math.min(start,q.length-1)),1)[0];if(shuffle){for(let i=q.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[q[i],q[j]]=[q[j],q[i]]}}q.unshift(first);playQueue=q.map(s=>s.id);queuePos=0;playQueuedAt(queuePos)}
-function playQueuedAt(pos){if(pos<0||pos>=playQueue.length)return;queuePos=pos;const s=songs.find(x=>x.id===playQueue[pos]);if(!s){next();return}current=songs.indexOf(s);recordPlay(s);playing=false;audio.pause();audio.removeAttribute('src');audio.load();audio.src=s.url;audio.currentTime=0;updatePlayer();updateMediaSession();const start=()=>{const attempt=audio.play();if(attempt&&typeof attempt.then==='function'){attempt.then(()=>{playing=true;updatePlayer();updateMediaSession()}).catch(()=>{playing=false;updatePlayer();updateMediaSession();console.warn('Automatski nastavak nije uspio; dodirni ▶ za nastavak.')})}};audio.addEventListener('canplay',function ready(){audio.removeEventListener('canplay',ready);start()},{once:true});audio.load();}
+function playQueuedAt(pos){if(pos<0||pos>=playQueue.length)return;queuePos=pos;const s=songs.find(x=>x.id===playQueue[pos]);if(!s){next();return}current=songs.indexOf(s);if(!s.artworkObjectUrl&&!s.artworkUrl)lookupArtwork(s);recordPlay(s);playing=false;audio.pause();audio.removeAttribute('src');audio.load();audio.src=s.url;audio.currentTime=0;updatePlayer();updateMediaSession();const start=()=>{const attempt=audio.play();if(attempt&&typeof attempt.then==='function'){attempt.then(()=>{playing=true;updatePlayer();updateMediaSession()}).catch(()=>{playing=false;updatePlayer();updateMediaSession();console.warn('Automatski nastavak nije uspio; dodirni ▶ za nastavak.')})}};audio.addEventListener('canplay',function ready(){audio.removeEventListener('canplay',ready);start()},{once:true});audio.load();}
 function next(){if(currentOnlineTrack){const i=musicSearchResults.findIndex(t=>t.trackId===currentOnlineTrack.trackId);if(musicSearchResults.length>1)playOnlineTrack(musicSearchResults[(i+1+musicSearchResults.length)%musicSearchResults.length]);return}if(currentStation){const i=radioResults.findIndex(s=>radioStationId(s)===radioStationId(currentStation));if(radioResults.length>1)playStation(radioResults[(i+1+radioResults.length)%radioResults.length]);return}if(playQueue.length&&queuePos<playQueue.length-1){playQueuedAt(queuePos+1);return}if(playQueue.length){const lastId=playQueue[queuePos];let cycle=playQueue.map(id=>songs.find(s=>s.id===id)).filter(Boolean);for(let i=cycle.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cycle[i],cycle[j]]=[cycle[j],cycle[i]]}if(cycle.length>1&&cycle[0].id===lastId){const j=1+Math.floor(Math.random()*(cycle.length-1));[cycle[0],cycle[j]]=[cycle[j],cycle[0]]}playQueue=cycle.map(s=>s.id);queuePos=0;if(playQueue.length)playQueuedAt(queuePos);return}if(!songs.length)return;playIndex((current+1+songs.length)%songs.length)}
 function prev(){if(currentOnlineTrack){const i=musicSearchResults.findIndex(t=>t.trackId===currentOnlineTrack.trackId);if(musicSearchResults.length>1)playOnlineTrack(musicSearchResults[(i-1+musicSearchResults.length)%musicSearchResults.length]);return}if(currentStation){const i=radioResults.findIndex(s=>radioStationId(s)===radioStationId(currentStation));if(radioResults.length>1)playStation(radioResults[(i-1+radioResults.length)%radioResults.length]);return}if(!songs.length)return;if(audio.currentTime>3){audio.currentTime=0;return}if(playQueue.length&&queuePos>0){playQueuedAt(queuePos-1);return}playIndex((current-1+songs.length)%songs.length)}
 let advancing=false;audio.addEventListener('ended',()=>{if(currentOnlineTrack){playing=false;updatePlayer();updateMediaSession();return}if(currentStation)return;if(advancing)return;advancing=true;playing=false;updatePlayer();next();setTimeout(()=>{advancing=false},1000)});audio.addEventListener('play',()=>{playing=true;updatePlayer();updateMediaSession()});audio.addEventListener('pause',()=>{playing=false;updatePlayer();updateMediaSession()});audio.addEventListener('timeupdate',()=>{syncPlayerProgress();if('mediaSession' in navigator&&Number.isFinite(audio.duration)&&audio.duration>0){try{navigator.mediaSession.setPositionState({duration:audio.duration,playbackRate:audio.playbackRate,position:Math.min(audio.currentTime,audio.duration)})}catch(e){}}});audio.addEventListener('loadedmetadata',()=>{updateMediaSession();if('mediaSession' in navigator&&Number.isFinite(audio.duration)&&audio.duration>0){try{navigator.mediaSession.setPositionState({duration:audio.duration,playbackRate:audio.playbackRate,position:Math.min(audio.currentTime,audio.duration)})}catch(e){}}});

@@ -96,6 +96,7 @@ main{padding:0 16px}.welcome{padding:12px 2px 18px}.eyebrow{color:var(--green);f
 const $=id=>document.getElementById(id);
 let songs=[], current=-1, playing=false, activeFilter='all', activeView='homeView', playlists=[], playQueue=[], queuePos=-1, playStats={};
 let radioResults=[], currentStation=null, radioLoaded=false, radioFavorites=[], radioFavoriteData=[];
+let musicSearchResults=[], currentOnlineTrack=null;
 try{radioFavorites=JSON.parse(localStorage.getItem('dernek-radio-favorites')||'[]')||[]}catch(e){radioFavorites=[]}
 try{radioFavoriteData=JSON.parse(localStorage.getItem('dernek-radio-favorite-data')||'[]')||[]}catch(e){radioFavoriteData=[]}
 const DB_NAME='dernek-music-db', DB_STORE='songs';
@@ -112,6 +113,40 @@ function parseSong(file){
 function countText(n){return n+' '+(n===1?'pjesma':'pjesama')}
 function recordPlay(s){playStats[String(s.id)]={count:(playStats[String(s.id)]?.count||0)+1,last:Date.now()};try{localStorage.setItem('dernek-play-stats',JSON.stringify(playStats))}catch(e){}renderQuickPicks()}
 function renderQuickPicks(){const root=$('quickPicks');if(!root)return;root.innerHTML='';let picks=[...songs].sort((a,b)=>{const aa=playStats[String(a.id)]||{},bb=playStats[String(b.id)]||{};return (bb.count||0)-(aa.count||0)||(bb.last||b.added)-(aa.last||a.added)}).slice(0,6);if(!picks.length){root.innerHTML='<div class="empty" style="grid-column:1/-1">Dodaj pjesme pritiskom na ＋ gore desno. Ovdje će se pojaviti tvoje česte i nedavne pjesme.</div>';return}picks.forEach(s=>{const b=document.createElement('button');b.className='quickpick';b.innerHTML='<span class="tile-art">♫</span><span style="min-width:0"><b></b><small></small></span>';b.querySelector('b').textContent=s.name;b.querySelector('small').textContent=s.artist;b.onclick=()=>{const i=songs.indexOf(s);if(i>=0)playIndex(i)};root.appendChild(b)})}
+function renderMusicResults(){
+ const root=$('musicResults');if(!root)return;root.innerHTML='';
+ if(!musicSearchResults.length){root.innerHTML='<div class="empty">Nema rezultata. Probaj upisati ime izvođača ili naziv pjesme.</div>';return}
+ musicSearchResults.forEach(track=>{
+  const row=document.createElement('div');row.className='music-result';
+  const img=document.createElement('img');img.src=track.artworkUrl100||'';img.alt='Naslovnica albuma';img.loading='lazy';
+  const info=document.createElement('div');info.className='music-result-info';
+  const title=document.createElement('b');title.textContent=track.trackName||'Nepoznata pjesma';
+  const artist=document.createElement('small');artist.textContent=(track.artistName||'Nepoznat izvođač')+' · '+(track.collectionName||'Singl');
+  info.append(title,artist);
+  const actions=document.createElement('div');actions.className='music-result-actions';
+  const play=document.createElement('button');play.textContent='▶';play.title='Poslušaj kratki pregled';play.disabled=!track.previewUrl;play.style.opacity=track.previewUrl?'1':'.45';play.onclick=()=>playOnlineTrack(track);
+  const link=document.createElement('a');link.textContent='Apple Music';link.href=track.trackViewUrl||'https://music.apple.com/hr/browse';link.target='_blank';link.rel='noopener';
+  actions.append(play,link);row.append(img,info,actions);root.appendChild(row);
+ });
+}
+async function searchMusic(){
+ const query=$('musicQuery').value.trim();if(!query){$('musicSearchStatus').textContent='Upiši izvođača ili pjesmu.';return}
+ $('musicSearchStatus').textContent='Pretražujem glazbeni katalog…';$('musicResults').innerHTML='';
+ try{
+  const url='https://itunes.apple.com/search?term='+encodeURIComponent(query)+'&country=hr&media=music&entity=song&limit=35';
+  const response=await fetch(url);if(!response.ok)throw new Error('Katalog trenutno nije dostupan');
+  const data=await response.json();musicSearchResults=(data.results||[]).filter(t=>t.kind==='song');
+  $('musicSearchStatus').textContent=musicSearchResults.length?'Pronađeno '+musicSearchResults.length+' rezultata. Dodirni ▶ za kratki pregled ili Apple Music za cijelu pjesmu.':'Nema rezultata za taj upit.';
+  renderMusicResults();
+ }catch(e){$('musicSearchStatus').textContent='Ne mogu pretražiti katalog. Provjeri internet i pokušaj ponovno.';console.warn('Music search failed',e)}
+}
+function playOnlineTrack(track){
+ if(!track||!track.previewUrl){$('musicSearchStatus').textContent='Za ovu pjesmu nije dostupan kratki pregled. Otvori je u Apple Musicu.';return}
+ currentOnlineTrack=track;currentStation=null;current=-1;playing=false;
+ audio.pause();audio.removeAttribute('src');audio.load();audio.src=track.previewUrl;audio.load();
+ updatePlayer();updateMediaSession();
+ audio.play().then(()=>{playing=true;updatePlayer();updateMediaSession();$('musicSearchStatus').textContent='Slušaš kratki pregled: '+track.trackName+' — '+track.artistName}).catch(()=>{$('musicSearchStatus').textContent='Pregled se nije pokrenuo. Dodirni ▶ još jednom.';playing=false;updatePlayer()});
+}
 function radioStationId(s){return s.stationuuid||s.url_resolved||s.name}
 function renderRadioStations(){
  const root=$('radioList');if(!root)return;root.innerHTML='';
@@ -265,9 +300,10 @@ $('nextBtn').onclick=next;$('prevBtn').onclick=prev;
 $('allTile').onclick=()=>{activeFilter='all';document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.filter==='all'));render()};
 $('artistTile').onclick=()=>showView('artistsView');
 $('newPlaylist').onclick=()=>{let name=prompt('Naziv playliste:');if(!name||!name.trim())return;const clean=name.trim();const q=clean.toLocaleLowerCase('hr');const matches=songs.filter(s=>(s.artist+' '+s.name).toLocaleLowerCase('hr').includes(q));playlists.push({name:clean,ids:matches.map(s=>s.id)});savePlaylists();renderPlaylists();if(matches.length)alert('Playlista „'+clean+'“ napravljena je s '+countText(matches.length)+' koje odgovaraju nazivu. Možeš dodati još pjesama.');else openPlaylistEditor(playlists[playlists.length-1])};
-function showView(id){activeView=id;['homeView','radioView','artistsView','playlistsView','helpView'].forEach(x=>$(x).classList.toggle('hidden',x!==id));if(id==='radioView'&&!radioLoaded)searchRadios({filter:'balkan'});document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===id));}
+function showView(id){activeView=id;['homeView','musicSearchView','radioView','artistsView','playlistsView','helpView'].forEach(x=>$(x).classList.toggle('hidden',x!==id));if(id==='radioView'&&!radioLoaded)searchRadios({filter:'balkan'});document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===id));}
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 $('settingsBtn').onclick=()=>showView('helpView');
+$('musicSearchBtn').onclick=searchMusic;$('musicQuery').addEventListener('keydown',e=>{if(e.key==='Enter')searchMusic()});
 $('radioSearchBtn').onclick=()=>searchRadios({filter:radioFilter,name:$('radioSearch').value,country:['HR','BA','RS'].includes(radioFilter)?radioFilter:''});
 $('radioSearch').addEventListener('keydown',e=>{if(e.key==='Enter')$('radioSearchBtn').click()});
 document.querySelectorAll('[data-radio]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-radio]').forEach(x=>x.classList.toggle('active',x===b));const f=b.dataset.radio;if(f==='HR'||f==='BA'||f==='RS')searchRadios({filter:f,country:f,name:$('radioSearch').value});else if(f==='folk')searchRadios({filter:'folk',tag:'folk',name:$('radioSearch').value});else if(f==='favorites')searchRadios({filter:'favorites'});else searchRadios({filter:'balkan',name:$('radioSearch').value})});

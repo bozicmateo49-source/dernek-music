@@ -94,6 +94,16 @@ main{padding:0 16px}.welcome{padding:12px 2px 18px}.eyebrow{color:var(--green);f
 </div>
 <script>
 const $=id=>document.getElementById(id);
+// Navigation is wired immediately so a later script error cannot disable the whole bottom bar.
+document.querySelector('.bottom').style.zIndex='100';
+document.querySelector('.nav').addEventListener('click',e=>{
+ const b=e.target.closest('button[data-view]');if(!b)return;
+ e.preventDefault();
+ const id=b.dataset.view;
+ document.querySelectorAll('main > section').forEach(s=>s.classList.toggle('hidden',s.id!==id));
+ document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x===b));
+ if(id==='radioView'&&!radioLoaded)searchRadios({filter:'balkan'});
+},true);
 let songs=[], current=-1, playing=false, activeFilter='all', activeView='homeView', playlists=[], playQueue=[], queuePos=-1, playStats={};
 let radioResults=[], currentStation=null, radioLoaded=false, radioFavorites=[], radioFavoriteData=[];
 let musicSearchResults=[], currentOnlineTrack=null;

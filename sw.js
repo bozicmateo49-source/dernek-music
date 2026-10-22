@@ -1,5 +1,5 @@
 
-const CACHE = 'dernek-music-v13';
+const CACHE = 'dernek-music-v14';
 const ASSETS = ['./', './index.html', './sw.js'];
 
 self.addEventListener('install', event => {

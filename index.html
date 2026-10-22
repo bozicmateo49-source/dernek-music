@@ -164,10 +164,9 @@ function renderMusicResults(rootId='musicResults', results=musicSearchResults){
   const artist=document.createElement('small');artist.textContent=(track.artistName||'Nepoznat izvođač')+' · '+(track.collectionName||'Singl');
   info.append(title,artist);
   const actions=document.createElement('div');actions.className='music-result-actions';
-  const youtubeUrl='https://www.youtube.com/results?search_query='+encodeURIComponent((track.artistName||'')+' '+(track.trackName||'')+' official audio');
-  const play=document.createElement('button');play.textContent='▶ Cijela pjesma';play.title='Pronađi cijelu pjesmu na YouTubeu';play.onclick=()=>{window.open(youtubeUrl,'_blank','noopener');const status=$('musicSearchStatus');if(status)status.textContent='Otvorio sam YouTube rezultate. Odaberi cijelu pjesmu; Appleov ▶ pregled je samo isječak.'};
-  const link=document.createElement('a');link.textContent='Apple Music';link.href=track.trackViewUrl||'https://music.apple.com/hr/browse';link.target='_blank';link.rel='noopener';
-  const youtube=document.createElement('a');youtube.textContent='YouTube';youtube.href=youtubeUrl;youtube.target='_blank';youtube.rel='noopener';
+   const play=document.createElement('button');play.textContent='▶ Isječak';play.title='Pusti kratki glazbeni pregled';play.onclick=()=>playOnlineTrack(track);
+   const link=document.createElement('a');link.textContent='Apple Music';link.href=track.trackViewUrl||'https://music.apple.com/hr/browse';link.target='_blank';link.rel='noopener';
+   actions.append(play,link);row.append(img,info,actions);root.appendChild(row);
   actions.append(play,link,youtube);row.append(img,info,actions);root.appendChild(row);
  });
 }

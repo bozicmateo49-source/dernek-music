@@ -143,14 +143,43 @@ async function searchMusic(queryOverride=null,statusId='musicSearchStatus',resul
  const query=(queryOverride===null?($('musicQuery')?.value||''):queryOverride).trim();
  const status=$(statusId),root=$(resultsId);
  if(!query){if(status)status.textContent='Upiši izvođača ili pjesmu.';if(root)root.innerHTML='';return}
- if(status)status.textContent='Pretražujem glazbeni katalog…';if(root)root.innerHTML='';
+ if(status)status.textContent='Pretražujem glazbu…';if(root)root.innerHTML='';
  try{
-  const url='https://itunes.apple.com/search?term='+encodeURIComponent(query)+'&country=hr&media=music&entity=song&limit=35';
-  const response=await fetch(url);if(!response.ok)throw new Error('Katalog trenutno nije dostupan');
-  const data=await response.json();musicSearchResults=(data.results||[]).filter(t=>t.kind==='song');
-  if(status)status.textContent=musicSearchResults.length?'Pronađeno '+musicSearchResults.length+' rezultata. ▶ je kratki pregled; YouTube/Apple Music otvara vanjski servis.':'Nema rezultata za taj upit.';
-  renderMusicResults(resultsId,musicSearchResults);
- }catch(e){if(status)status.textContent='Ne mogu pretražiti katalog. Provjeri internet i pokušaj ponovno.';console.warn('Music search failed',e)}
+  // Try several storefronts because the Croatian catalog may not contain regional music.
+  let found=[];
+  for(const country of ['hr','rs','ba','us','gb']){
+   const url='https://itunes.apple.com/search?term='+encodeURIComponent(query)+'&country='+country+'&media=music&entity=song&limit=35';
+   const response=await fetch(url);
+   if(!response.ok)continue;
+   const data=await response.json();
+   const tracks=(data.results||[]).filter(t=>t.kind==='song');
+   if(tracks.length){found=tracks;break}
+  }
+  musicSearchResults=found;
+  if(found.length){
+   if(status)status.textContent='Pronađeno '+found.length+' rezultata. ▶ je kratki pregled; YouTube otvara više snimki.';
+   renderMusicResults(resultsId,found);
+  }else{
+   if(status)status.textContent='Appleov katalog nema ovu pjesmu. Probaj pronaći je na YouTubeu:';
+   if(root){
+    root.innerHTML='';
+    const row=document.createElement('div');row.className='empty';row.style.textAlign='left';
+    const message=document.createElement('div');message.textContent='Nema rezultata u glazbenom katalogu. To ne znači da pjesma ne postoji.';
+    const link=document.createElement('a');link.textContent='▶ Pronađi „'+query+'” na YouTubeu';link.href='https://www.youtube.com/results?search_query='+encodeURIComponent(query);link.target='_blank';link.rel='noopener';link.style.cssText='display:inline-block;margin-top:14px;color:var(--green);font-weight:800';
+    row.append(message,link);root.appendChild(row);
+   }
+  }
+ }catch(e){
+  if(status)status.textContent='Pretraga nije uspjela. Provjeri internet i pokušaj ponovno.';
+  if(root){
+   root.innerHTML='';
+   const row=document.createElement('div');row.className='empty';row.style.textAlign='left';
+   row.textContent='Appleov katalog trenutačno nije dostupan. Možeš ipak tražiti pjesmu na YouTubeu.';
+   const link=document.createElement('a');link.textContent='▶ Traži „'+query+'” na YouTubeu';link.href='https://www.youtube.com/results?search_query='+encodeURIComponent(query);link.target='_blank';link.rel='noopener';link.style.cssText='display:inline-block;margin-top:14px;color:var(--green);font-weight:800';
+   row.appendChild(document.createElement('br'));row.appendChild(link);root.appendChild(row);
+  }
+  console.warn('Music search failed',e);
+ }
 }
 function playOnlineTrack(track){
  if(!track||!track.previewUrl){$('musicSearchStatus').textContent='Za ovu pjesmu nije dostupan kratki pregled. Otvori je u Apple Musicu.';return}

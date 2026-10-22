@@ -133,7 +133,7 @@ async function searchRadios(options={}){
  if(radioFilter==='favorites'){renderRadioStations();if(status)status.textContent='Tvoje spremljene omiljene postaje.';return}
  const searchName=(options.name||'').trim(), country=options.country||'', tag=options.tag||'';
  const fetchOne=async(code)=>{
-  const params=new URLSearchParams({limit:'30',order:'votes',reverse:'true',hidebroken:'true'});
+  const params=new URLSearchParams({limit:'30',order:'votes',reverse:'true',hidebroken:'true',is_https:'true'});
   if(code)params.set('countrycode',code);
   if(searchName)params.set('name',searchName);
   if(tag)params.set('tag',tag);

@@ -1,5 +1,5 @@
 
-const CACHE = 'dernek-music-v3';
+const CACHE = 'dernek-music-v4';
 const ASSETS = ['./', './index.html', './sw.js'];
 
 self.addEventListener('install', event => {
@@ -24,22 +24,28 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
-  event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
+  const isPage = event.request.mode === 'navigate' ||
+    new URL(event.request.url).pathname.endsWith('/index.html');
 
-      return fetch(event.request).then(response => {
-        if (
-          response.ok &&
-          new URL(event.request.url).origin === location.origin
-        ) {
-          const copy = response.clone();
-          caches.open(CACHE).then(cache =>
-            cache.put(event.request, copy)
-          );
-        }
-        return response;
-      }).catch(() => caches.match('./index.html'));
-    })
+  event.respondWith(
+    (isPage
+      ? fetch(event.request).then(response => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE).then(cache => cache.put('./index.html', copy));
+          }
+          return response;
+        }).catch(() => caches.match('./index.html'))
+      : caches.match(event.request).then(cached => {
+          if (cached) return cached;
+          return fetch(event.request).then(response => {
+            if (response.ok && new URL(event.request.url).origin === location.origin) {
+              const copy = response.clone();
+              caches.open(CACHE).then(cache => cache.put(event.request, copy));
+            }
+            return response;
+          }).catch(() => caches.match('./index.html'));
+        })
+    )
   );
 });
